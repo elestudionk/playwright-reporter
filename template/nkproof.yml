@@ -1,0 +1,104 @@
+# nk.proof — end-to-end tests of this project, reported to nk.proof.
+# Copy to .github/workflows/nkproof.yml in the client's repository.
+#
+# Runs on GitHub's runners:
+#   - when Vercel or Netlify finish a deployment (deployment_status): deploy
+#     previews gate the PR — make "e2e" a required status check on the
+#     production branch — and production deploys are recorded as a smoke run;
+#   - on demand (workflow_dispatch), used by nk.proof for "Correr" and schedules.
+#
+# Repo settings (Settings → Secrets and variables → Actions):
+#   secrets  NKPROOF_TOKEN                    project token (nk.proof → project → Configuración)
+#            VERCEL_AUTOMATION_BYPASS_SECRET  only for protected Vercel previews
+#            (plus whatever the tests need to log in, e.g. E2E_PASSWORD)
+#   vars     NKPROOF_URL                      e.g. https://proof.nk.studio
+
+name: nk.proof
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: URL to test
+        required: true
+      nkproof_run_id:
+        description: Run queued in nk.proof (set by nk.proof)
+        required: false
+      source:
+        description: schedule or dispatch (set by nk.proof)
+        required: false
+        default: dispatch
+      grep:
+        description: Only tests matching this (e.g. @smoke)
+        required: false
+
+concurrency:
+  group: e2e-${{ github.event.deployment.sha || github.ref }}-${{ github.event.deployment.environment || 'dispatch' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  e2e:
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_URL: ${{ inputs.base_url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      NKPROOF_URL: ${{ vars.NKPROOF_URL }}
+      NKPROOF_TOKEN: ${{ secrets.NKPROOF_TOKEN }}
+      NKPROOF_RUN_ID: ${{ inputs.nkproof_run_id }}
+      NKPROOF_COMMIT: ${{ github.event.deployment.sha || github.sha }}
+      NKPROOF_ENVIRONMENT: ${{ github.event.deployment.environment }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.deployment.sha || github.ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      # Use the project's package manager (yarn install --frozen-lockfile, pnpm install --frozen-lockfile…).
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Describe the run for nk.proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.deployment.sha || github.sha }}
+          ENVIRONMENT: ${{ github.event.deployment.environment }}
+          EVENT: ${{ github.event_name }}
+          SOURCE: ${{ inputs.source }}
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            case "$SOURCE" in schedule|dispatch) ;; *) SOURCE=dispatch ;; esac
+            echo "NKPROOF_SOURCE=$SOURCE" >> "$GITHUB_ENV"
+          elif echo "$ENVIRONMENT" | grep -qi '^production'; then
+            echo "NKPROOF_SOURCE=deploy" >> "$GITHUB_ENV"
+          else
+            echo "NKPROOF_SOURCE=pr" >> "$GITHUB_ENV"
+          fi
+          PULLS=$(gh api "repos/$REPO/commits/$SHA/pulls" 2>/dev/null || echo '[]')
+          echo "NKPROOF_PR=$(echo "$PULLS" | jq -r '.[0].number // empty')" >> "$GITHUB_ENV"
+          BRANCH=$(echo "$PULLS" | jq -r '.[0].head.ref // empty' | tr -cd '[:alnum:]._/-')
+          echo "NKPROOF_BRANCH=${BRANCH:-$REF_NAME}" >> "$GITHUB_ENV"
+
+      - name: Run Playwright
+        env:
+          GREP: ${{ inputs.grep }}
+        run: npx playwright test ${GREP:+--grep "$GREP"}
+
+      - name: Keep videos and traces of failures
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 14
