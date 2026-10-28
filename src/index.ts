@@ -158,6 +158,7 @@ export default class NkproofReporter implements Reporter {
     const screenshot = result.attachments.find(
       (attachment) => attachment.name === "screenshot" && attachment.path && attachment.contentType.startsWith("image/"),
     )?.path;
+    const error = expectedFailure || result.status === "passed" ? null : this.describeFailure(test, result);
 
     this.enqueue(async () => {
       if (!this.runId) return;
@@ -167,7 +168,7 @@ export default class NkproofReporter implements Reporter {
         key,
         status: expectedFailure ? "passed" : result.status,
         durationMs: result.duration,
-        error: expectedFailure ? null : (result.error?.message ?? result.error?.value ?? null),
+        error,
         steps: result.steps.filter((step) => step.category === "test.step").map((step: TestStep) => ({
           title: step.title,
           status: step.error ? "failed" : "passed",
@@ -202,6 +203,23 @@ export default class NkproofReporter implements Reporter {
   }
 
   // -------------------------------------------------------------------------
+
+  /**
+   * The error, plus what helps to look into it: the test's `nkproof-note`
+   * annotations (e.g. a link to the data it used) and, when it ran on this
+   * machine, the command that opens its trace.
+   */
+  private describeFailure(test: TestCase, result: TestResult): string | null {
+    const message = result.error?.message ?? result.error?.value ?? null;
+    const notes = [...test.annotations, ...result.annotations]
+      .filter((annotation) => annotation.type === "nkproof-note" && annotation.description)
+      .map((annotation) => annotation.description as string);
+    const trace = result.attachments.find((attachment) => attachment.name === "trace" && attachment.path)?.path;
+    if (trace && !env("CI")) notes.push(`Trace: npx playwright show-trace "${trace}"`);
+    // Notes first: the server keeps only the start of long errors.
+    const parts = [...new Set(notes), message].filter((part): part is string => Boolean(part));
+    return parts.length > 0 ? parts.join("\n\n") : null;
+  }
 
   /** `nkproof` annotation if present, else "file › describe › title". */
   private keyOf(test: TestCase): string {
