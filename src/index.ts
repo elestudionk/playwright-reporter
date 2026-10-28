@@ -14,10 +14,10 @@ import type {
 /**
  * Playwright reporter for nk.proof.
  *
- * On start it sends every test (they become cases of the project, keyed by
- * file › describe › title or by an `nkproof` annotation), then each final
- * outcome with its `test.step`s and failure screenshot, and finally closes
- * the run. It never fails the test run: if nk.proof can't be reached it only
+ * On start it sends every test (keyed by file › describe › title, or by an
+ * `nkproof` annotation: a case code such as "PROOF-TC-003" links the test to
+ * that case), then each final outcome with its `test.step`s and failure
+ * screenshot, and finally closes the run. It never fails the test run: if nk.proof can't be reached it only
  * warns, so the CI gate depends on the tests alone.
  *
  * Configuration (reporter options win over environment variables):
@@ -44,7 +44,7 @@ export interface NkproofReporterOptions {
 }
 
 interface ReportedResult {
-  resultId: string;
+  key: string;
   status: TestResult["status"];
   durationMs: number;
   error: string | null;
@@ -100,7 +100,16 @@ export default class NkproofReporter implements Reporter {
       const key = this.keyOf(test);
       if (seen.has(key)) return [];
       seen.add(key);
-      return [{ key, title: test.title, suitePath: [this.fileOf(test), ...this.describesOf(test)], tags: test.tags }];
+      return [
+        {
+          key,
+          title: test.title,
+          file: this.fileOf(test),
+          line: test.location.line,
+          suitePath: this.describesOf(test),
+          tags: test.tags,
+        },
+      ];
     });
     if (tests.length === 0) return;
 
@@ -133,7 +142,8 @@ export default class NkproofReporter implements Reporter {
       this.runId = started.runId;
       this.runUrl = started.runUrl;
       this.resultIds = new Map(Object.entries(started.results));
-      log(`Reportando ${tests.length} tests en ${started.runUrl}`);
+      const linked = this.resultIds.size;
+      log(`Reportando ${tests.length} tests (${linked} vinculados a casos) en ${started.runUrl}`);
     });
   }
 
@@ -150,10 +160,11 @@ export default class NkproofReporter implements Reporter {
     )?.path;
 
     this.enqueue(async () => {
+      if (!this.runId) return;
+      // Only tests linked to a case have a result (and can keep a screenshot).
       const resultId = this.resultIds.get(key);
-      if (!resultId) return;
       this.queue.push({
-        resultId,
+        key,
         status: expectedFailure ? "passed" : result.status,
         durationMs: result.duration,
         error: expectedFailure ? null : (result.error?.message ?? result.error?.value ?? null),
@@ -162,7 +173,7 @@ export default class NkproofReporter implements Reporter {
           status: step.error ? "failed" : "passed",
         })),
       });
-      if (result.status !== "passed" && screenshot) await this.uploadScreenshot(resultId, screenshot);
+      if (resultId && result.status !== "passed" && screenshot) await this.uploadScreenshot(resultId, screenshot);
       if (this.queue.length >= BATCH_SIZE) await this.flush();
       else this.scheduleFlush();
     });

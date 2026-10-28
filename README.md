@@ -2,8 +2,9 @@
 
 Reporter de Playwright que registra las corridas automáticas en nk.proof:
 
-- **Casos:** cada test pasa a ser un caso del proyecto, dentro de la suite "Automatizados / archivo / describe".
-- **Ejecución:** cada corrida pasa a ser una ejecución con el resultado de cada test, sus `test.step`, el error, la duración y la captura del fallo.
+- **Tests:** cada corrida le avisa a nk.proof qué tests existen y cómo les fue. Aparecen en Proyecto → Configuración → Tests automatizados.
+- **Casos:** son manuales por defecto. Un test se puede **vincular** a un caso (ver abajo); el caso muestra el tag "Automatizado" y se puede correr desde nk.proof.
+- **Ejecución:** cada corrida pasa a ser una ejecución con el resultado de cada test vinculado, sus `test.step`, el error, la duración y la captura del fallo.
 
 Los tests corren en GitHub Actions, en el repositorio del cliente.
 
@@ -31,17 +32,26 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
 6. **Workflow:** copiá `template/nkproof.yml` a `.github/workflows/nkproof.yml`.
 7. **Gate:** en GitHub, en Settings → Branches, protegé la rama de producción y marcá **e2e** como *required status check*. Si un test falla en el preview del PR, no se puede mergear.
 
-## Claves de los casos
+## Vincular tests a casos
 
-Cada test se identifica por `archivo › describe › título`. Si cambiás el título o lo movés, se crea un caso nuevo. Para mantener el mismo caso aunque cambie, fijale una clave:
+Cada test se identifica por `archivo › describe › título`. Hay dos formas de vincularlo a un caso:
+
+- **Desde nk.proof:** en el panel "Automatización" del caso, elegí el test y tocá **Vincular**. Para un test sin caso, también podés usar **Crear caso** en Configuración.
+- **Desde el código:** poné el código del caso en la anotación `nkproof`, y en la próxima corrida queda vinculado:
 
 ```ts
-test("Pedir licencia", { annotation: { type: "nkproof", description: "licencias-pedir" } }, async ({ page }) => {
+test("Pedir licencia", { annotation: { type: "nkproof", description: "HR-TC-012" } }, async ({ page }) => {
   // …
 });
 ```
 
-Los tags (`{ tag: "@smoke" }`) se copian al caso.
+Si renombrás o movés un test vinculado desde nk.proof, su clave cambia y hay que volver a vincularlo. Con la anotación, el vínculo no se pierde.
+
+## Correr desde nk.proof
+
+En desarrollo, los botones **Correr** del caso, de la suite y de Ejecuciones lanzan Playwright en tu compu, solo con los tests vinculados. La carpeta se configura en Configuración → Tests automatizados. La ejecución aparece "En cola", pasa a "Corriendo" y se actualiza sola. En producción el mismo botón va a disparar este workflow en GitHub Actions.
+
+Playwright corre los tests elegidos con `archivo:línea`, y las dependencias (como un proyecto `setup` que inicia sesión) se corren igual.
 
 ## Variables
 
