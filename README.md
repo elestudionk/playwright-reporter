@@ -59,9 +59,12 @@ Si renombrás o movés un test vinculado desde nk.proof, su clave cambia y hay q
 
 ## Correr desde nk.proof
 
-En desarrollo, los botones **Correr** del caso, de la suite y de Ejecuciones hacen el build de producción y lanzan Playwright en tu compu, solo con los tests vinculados. La carpeta se configura en Configuración → Tests automatizados. La ejecución aparece "En cola", pasa a "Corriendo" y se actualiza sola. En producción el mismo botón va a disparar este workflow en GitHub Actions.
+Los botones **Correr** del caso, de la suite y de Ejecuciones corren solo los tests vinculados. La ejecución aparece "En cola", pasa a "Corriendo" y se actualiza sola.
 
-Playwright corre los tests elegidos con `archivo:línea`, y las dependencias (como un proyecto `setup` que inicia sesión) se corren igual.
+- **En producción** nk.proof dispara este workflow en GitHub Actions con la GitHub App de nk.studio. En Configuración → Repositorio de GitHub cargá el owner, el repo, el workflow, la rama y la URL base, e instalá la App en el repo (permiso *Actions: lectura y escritura*). El workflow recibe `base_url`, `nkproof_run_id`, `source` y `grep` (los tests elegidos), y el reporter toma la ejecución en cola con el `NKPROOF_TOKEN` del repo: ningún token viaja por los inputs, que quedan en los logs.
+- **En desarrollo**, si configurás la carpeta local en Configuración → Tests automatizados, nk.proof hace el build de producción y lanza Playwright en tu compu con `archivo:línea`. Las dependencias (como un proyecto `setup` que inicia sesión) se corren igual.
+
+Las **programaciones** (Configuración → Programaciones) disparan el mismo workflow todos los días, semanas o meses, con un plan, un filtro `grep` o todo el proyecto. Las ejecuciones que quedan en cola o corriendo sin novedades por más de 60 minutos se cierran con error.
 
 ## Variables
 
