@@ -32,6 +32,12 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
 6. **Workflow:** copiá `template/nkproof.yml` a `.github/workflows/nkproof.yml`.
 7. **Gate:** en GitHub, en Settings → Branches, protegé la rama de producción y marcá **e2e** como *required status check*. Si un test falla en el preview del PR, no se puede mergear.
 
+   En cada PR, el workflow espera hasta 15 minutos el deploy preview y corre los tests contra esa URL:
+   - **Vercel:** lo toma del deployment que Vercel crea en GitHub.
+   - **Netlify:** lo toma del estado `netlify/<sitio>/deploy-preview` del commit (`https://deploy-preview-<PR>--<sitio>.netlify.app`).
+
+   Si el preview falla o no llega a tiempo, el check queda en rojo.
+
 ## Pasos del test = pasos del caso
 
 Escribí cada caso con la guía de [docs/qa-guia-casos.md](../../docs/qa-guia-casos.md). En el test vinculado:
