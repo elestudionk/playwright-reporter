@@ -50,7 +50,8 @@ jobs:
     timeout-minutes: 35
     env:
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-      NKPROOF_URL: ${{ vars.NKPROOF_URL }}
+      # A variable; also read as a secret in case it was saved as one.
+      NKPROOF_URL: ${{ vars.NKPROOF_URL || secrets.NKPROOF_URL }}
       NKPROOF_TOKEN: ${{ secrets.NKPROOF_TOKEN }}
       NKPROOF_RUN_ID: ${{ inputs.nkproof_run_id }}
       NKPROOF_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -89,8 +90,8 @@ jobs:
               esac
             done
             if [ -z "$URL" ]; then
-              read -r STATE CONTEXT TARGET <<< "$(gh api "repos/$REPO/commits/$SHA/status" \
-                --jq '[.statuses[] | select(.context | test("^netlify/[^/]+/deploy-preview$"))][0] // {} | "\(.state // "none") \(.context // "-") \(.target_url // "")"')"
+              read -r STATE CONTEXT TARGET DESCRIPTION <<< "$(gh api "repos/$REPO/commits/$SHA/status" \
+                --jq '[.statuses[] | select(.context | test("^netlify/[^/]+/deploy-preview$"))][0] // {} | "\(.state // "none") \(.context // "-") \(.target_url // "-") \(.description // "")"')"
               case "$STATE" in
                 success)
                   if echo "$TARGET" | grep -Eq '^https://deploy-preview-[0-9]+--[a-z0-9-]+\.netlify\.app'; then
@@ -99,7 +100,7 @@ jobs:
                     SITE=$(echo "$CONTEXT" | cut -d/ -f2)
                     URL="https://deploy-preview-$PR--$SITE.netlify.app"
                   fi ;;
-                failure|error) echo "::error::El deploy preview de Netlify falló."; exit 1 ;;
+                failure|error) echo "::error::El deploy preview de Netlify falló: $DESCRIPTION ($TARGET)"; exit 1 ;;
               esac
             fi
             if [ -n "$URL" ]; then
