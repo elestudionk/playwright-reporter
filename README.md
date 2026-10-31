@@ -38,6 +38,28 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
 
    Si el preview falla o no llega a tiempo, el check queda en rojo.
 
+## Escribir los tests
+
+Importá `test` y `expect` de `@nkstudio/playwright-reporter/test`, no de `@playwright/test`. Es el mismo `test` de Playwright, con dos agregados:
+
+- **Sin las barras de los deploy previews.** Los tests no cargan el Netlify Drawer ni la Vercel Toolbar: no son parte de la app y mantienen la red ocupada.
+- **`openPage(url)` y `reloadPage()`.** Abren o recargan la página y esperan a que esté lista para usar. Usalos en lugar de `page.goto` y `page.reload`.
+
+```ts
+import { expect, test } from "@nkstudio/playwright-reporter/test";
+
+test("Pedir licencia", async ({ page, openPage }) => {
+  await test.step("Abrir «Licencias»", async () => {
+    await openPage("/licencias");
+    await expect(page.getByRole("heading", { name: "Licencias" })).toBeVisible();
+  });
+});
+```
+
+**No uses `waitForLoadState("networkidle")`.** Playwright lo desaconseja: espera a que la red quede quieta, y cualquier pedido que siga (analytics, un chat de soporte, un pedido periódico) lo cuelga. Para saber que algo cargó, verificá lo que se ve en pantalla con `expect`.
+
+**Página lista (opcional).** Si la app marca cuándo responde a los clicks, poné ese selector en `readySelector` de la config y `openPage` lo espera. En una app de Next.js alcanza con un componente cliente en el layout raíz que, en un `useEffect`, haga `document.documentElement.dataset.hydrated = "true"`, y `readySelector: "html[data-hydrated]"`. Sin `readySelector`, `openPage` espera a que la página cargue. El código de los tests es el mismo en los dos casos.
+
 ## Pasos del test = pasos del caso
 
 Escribí cada caso con la guía de [docs/qa-guia-casos.md](../../docs/qa-guia-casos.md). En el test vinculado:
