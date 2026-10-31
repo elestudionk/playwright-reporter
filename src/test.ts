@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 
 /**
  * Playwright's `test` for projects reported to nk.proof. Import `test` and
@@ -27,6 +27,11 @@ export interface NkproofOptions {
   readySelector: string | undefined;
 }
 
+/** Waits for `readySelector` with the test's own timeout (hydration can be slow on a busy CI runner). */
+async function waitUntilReady(page: Page, readySelector: string | undefined): Promise<void> {
+  if (readySelector) await page.locator(readySelector).waitFor({ state: "attached" });
+}
+
 export interface NkproofFixtures {
   /** Opens `url` (relative to baseURL) and waits until the page is ready to use. */
   openPage: (url: string) => Promise<void>;
@@ -44,13 +49,13 @@ export const test = base.extend<NkproofFixtures & NkproofOptions>({
   openPage: async ({ page, readySelector }, provide) => {
     await provide(async (url) => {
       await page.goto(url);
-      if (readySelector) await expect(page.locator(readySelector)).toBeAttached();
+      await waitUntilReady(page, readySelector);
     });
   },
   reloadPage: async ({ page, readySelector }, provide) => {
     await provide(async () => {
       await page.reload();
-      if (readySelector) await expect(page.locator(readySelector)).toBeAttached();
+      await waitUntilReady(page, readySelector);
     });
   },
 });
