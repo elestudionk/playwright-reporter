@@ -11,6 +11,8 @@ import type {
   TestStep,
 } from "@playwright/test/reporter";
 
+import { OutcomeMerger, inBatches, type ReportedOutcome } from "./outcome";
+
 /**
  * Playwright reporter for nk.proof.
  *
@@ -43,13 +45,7 @@ export interface NkproofReporterOptions {
   name?: string;
 }
 
-interface ReportedResult {
-  key: string;
-  status: TestResult["status"];
-  durationMs: number;
-  error: string | null;
-  steps: { title: string; status: "passed" | "failed" }[];
-}
+type ReportedResult = ReportedOutcome;
 
 const BATCH_SIZE = 10;
 const FLUSH_DELAY_MS = 3000;
@@ -73,6 +69,7 @@ export default class NkproofReporter implements Reporter {
   private runUrl: string | null = null;
   private resultIds = new Map<string, string>();
   private queue: ReportedResult[] = [];
+  private merger = new OutcomeMerger(new Map());
   private timer: ReturnType<typeof setTimeout> | null = null;
   /** Every request goes through this chain, so they reach nk.proof in order. */
   private chain: Promise<void> = Promise.resolve();
@@ -95,6 +92,10 @@ export default class NkproofReporter implements Reporter {
   onBegin(config: FullConfig, suite: Suite): void {
     if (this.disabled) return;
     this.rootDir = config.rootDir;
+    // The same test runs once per project; each key is reported once, with its worst outcome.
+    const counts = new Map<string, number>();
+    for (const test of suite.allTests()) counts.set(this.keyOf(test), (counts.get(this.keyOf(test)) ?? 0) + 1);
+    this.merger = new OutcomeMerger(counts);
     const seen = new Set<string>();
     const tests = suite.allTests().flatMap((test) => {
       const key = this.keyOf(test);
@@ -164,7 +165,7 @@ export default class NkproofReporter implements Reporter {
       if (!this.runId) return;
       // Only tests linked to a case have a result (and can keep a screenshot).
       const resultId = this.resultIds.get(key);
-      this.queue.push({
+      const merged = this.merger.add({
         key,
         status: expectedFailure ? "passed" : result.status,
         durationMs: result.duration,
@@ -174,6 +175,7 @@ export default class NkproofReporter implements Reporter {
           status: step.error ? "failed" : "passed",
         })),
       });
+      if (merged) this.queue.push(merged);
       if (resultId && result.status !== "passed" && screenshot) await this.uploadScreenshot(resultId, screenshot);
       if (this.queue.length >= BATCH_SIZE) await this.flush();
       else this.scheduleFlush();
@@ -184,6 +186,7 @@ export default class NkproofReporter implements Reporter {
     if (this.timer) clearTimeout(this.timer);
     await this.chain;
     if (this.disabled || !this.runId) return;
+    this.queue.push(...this.merger.drain());
     await this.flush();
     const finished = await this.request<{ verdict: string; runUrl: string }>(
       `/api/automation/runs/${this.runId}/finish`,
@@ -256,8 +259,11 @@ export default class NkproofReporter implements Reporter {
 
   private async flush(): Promise<void> {
     if (!this.runId || this.queue.length === 0) return;
-    const results = this.queue.splice(0);
-    await this.request(`/api/automation/runs/${this.runId}/results`, { results });
+    // Usually under BATCH_SIZE, but the end of an interrupted run can hand
+    // over every outcome still waiting for a project (OutcomeMerger.drain).
+    for (const results of inBatches(this.queue.splice(0), BATCH_SIZE)) {
+      await this.request(`/api/automation/runs/${this.runId}/results`, { results });
+    }
   }
 
   private async uploadScreenshot(resultId: string, filePath: string): Promise<void> {

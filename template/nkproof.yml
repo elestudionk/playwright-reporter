@@ -49,14 +49,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
       # A variable; also read as a secret in case it was saved as one.
       NKPROOF_URL: ${{ vars.NKPROOF_URL || secrets.NKPROOF_URL }}
-      NKPROOF_TOKEN: ${{ secrets.NKPROOF_TOKEN }}
       NKPROOF_RUN_ID: ${{ inputs.nkproof_run_id }}
       NKPROOF_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
       NKPROOF_ENVIRONMENT: ${{ github.event_name == 'pull_request' && 'Deploy preview' || '' }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -141,9 +138,14 @@ jobs:
           BRANCH=$(printf '%s' "${HEAD_REF:-$REF_NAME}" | tr -cd '[:alnum:]._/-')
           echo "NKPROOF_BRANCH=$BRANCH" >> "$GITHUB_ENV"
 
+      # Secrets only reach this step: the install above runs dependency
+      # scripts, which must not be able to read the token or the password.
       - name: Run Playwright
         env:
           GREP: ${{ inputs.grep }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          NKPROOF_TOKEN: ${{ secrets.NKPROOF_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npx playwright test ${GREP:+--grep "$GREP"}
 
       - name: Keep videos and traces of failures

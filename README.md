@@ -94,6 +94,12 @@ Los botones **Correr** del caso, de la suite y de Ejecuciones corren solo los te
 
 Las **programaciones** (Configuración → Programaciones) disparan el mismo workflow todos los días, semanas o meses, con un plan, un filtro `grep` o todo el proyecto. Las ejecuciones que quedan en cola o corriendo sin novedades por más de 60 minutos se cierran con error.
 
+## Varios navegadores y shards
+
+Si el mismo test corre en varios proyectos de Playwright (por ejemplo chromium y firefox), se informa una sola vez, con el peor resultado: si falla en uno y pasa en el otro, queda «Falló».
+
+No usar `--shard`: cada shard cerraría la ejecución en nk.proof al terminar, y los resultados de los demás shards se perderían.
+
 ## Variables
 
 | Variable | Para qué |
