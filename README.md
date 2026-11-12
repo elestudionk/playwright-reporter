@@ -1,4 +1,4 @@
-# @elestudionk/playwright-reporter
+# @estudio-nk/playwright-reporter
 
 Reporter de Playwright que registra las corridas automáticas en nk.proof:
 
@@ -14,13 +14,13 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
 2. **Reporter:** instalalo.
 
    ```bash
-   npm i -D @playwright/test @elestudionk/playwright-reporter
+   npm i -D @playwright/test @estudio-nk/playwright-reporter
    ```
 
-3. **Config:** copiá `node_modules/@elestudionk/playwright-reporter/template/playwright.config.example.ts`, o agregá el reporter a tu config:
+3. **Config:** copiá `node_modules/@estudio-nk/playwright-reporter/template/playwright.config.example.ts`, o agregá el reporter a tu config:
 
    ```ts
-   reporter: [["list"], ["@elestudionk/playwright-reporter"]],
+   reporter: [["list"], ["@estudio-nk/playwright-reporter"]],
    use: { screenshot: "only-on-failure" },
    ```
 
@@ -29,7 +29,7 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
    - secret `NKPROOF_TOKEN` (el token del paso 4)
    - variable `NKPROOF_URL`
    - los secrets que necesiten los tests
-6. **Workflow:** copiá `node_modules/@elestudionk/playwright-reporter/template/nkproof.yml` a `.github/workflows/nkproof.yml`.
+6. **Workflow:** copiá `node_modules/@estudio-nk/playwright-reporter/template/nkproof.yml` a `.github/workflows/nkproof.yml`.
 7. **Gate:** en GitHub, en Settings → Branches, protegé la rama de producción y marcá **e2e** como *required status check*. Si un test falla en el preview del PR, no se puede mergear.
 
    En cada PR, el workflow espera hasta 15 minutos el deploy preview y corre los tests contra esa URL:
@@ -40,13 +40,13 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
 
 ## Escribir los tests
 
-Importá `test` y `expect` de `@elestudionk/playwright-reporter/test`, no de `@playwright/test`. Es el mismo `test` de Playwright, con dos agregados:
+Importá `test` y `expect` de `@estudio-nk/playwright-reporter/test`, no de `@playwright/test`. Es el mismo `test` de Playwright, con dos agregados:
 
 - **Sin las barras de los deploy previews.** Los tests no cargan el Netlify Drawer ni la Vercel Toolbar: no son parte de la app y mantienen la red ocupada.
 - **`openPage(url)` y `reloadPage()`.** Abren o recargan la página y esperan a que esté lista para usar. Usalos en lugar de `page.goto` y `page.reload`.
 
 ```ts
-import { expect, test } from "@elestudionk/playwright-reporter/test";
+import { expect, test } from "@estudio-nk/playwright-reporter/test";
 
 test("Pedir licencia", async ({ page, openPage }) => {
   await test.step("Abrir «Licencias»", async () => {

@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import type { NkproofOptions } from "@elestudionk/playwright-reporter/test";
+import type { NkproofOptions } from "@estudio-nk/playwright-reporter/test";
 
 /**
  * Example config for a client project. BASE_URL is set by the workflow
@@ -10,7 +10,7 @@ export default defineConfig<NkproofOptions>({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  reporter: [[process.env.CI ? "github" : "list"], ["@elestudionk/playwright-reporter"]],
+  reporter: [[process.env.CI ? "github" : "list"], ["@estudio-nk/playwright-reporter"]],
   use: {
     baseURL: process.env.BASE_URL ?? "http://localhost:3000",
     // If the app marks when it is interactive (e.g. <html data-hydrated> set

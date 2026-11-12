@@ -1,5 +1,5 @@
 {
-  "name": "@elestudionk/playwright-reporter",
+  "name": "@estudio-nk/playwright-reporter",
   "version": "0.1.0",
   "description": "Playwright reporter that records automated runs in nk.proof",
   "license": "MIT",
