@@ -1,0 +1,46 @@
+# Publishes to npm when a vX.Y.Z tag is pushed. Uses npm Trusted Publishing
+# (OIDC): no npm token is stored anywhere, and provenance is generated
+# automatically because the repository and the package are public.
+# Trusted publisher on npmjs.com: repo elestudionk/playwright-reporter,
+# workflow release.yml.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          # Trusted Publishing needs Node >= 22.14 and npm >= 11.5.1.
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Check the tag matches package.json
+        run: |
+          VERSION="$(node -p 'require("./package.json").version')"
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $VERSION."
+            exit 1
+          fi
+      # --ignore-scripts: dependency install scripts never run in the job
+      # that can mint the publish token.
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm publish

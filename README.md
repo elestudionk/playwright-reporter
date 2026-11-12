@@ -1,4 +1,4 @@
-# @nkstudio/playwright-reporter
+# @elestudionk/playwright-reporter
 
 Reporter de Playwright que registra las corridas automáticas en nk.proof:
 
@@ -14,13 +14,13 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
 2. **Reporter:** instalalo.
 
    ```bash
-   npm i -D @playwright/test @nkstudio/playwright-reporter
+   npm i -D @playwright/test @elestudionk/playwright-reporter
    ```
 
-3. **Config:** copiá `template/playwright.config.example.ts`, o agregá el reporter a tu config:
+3. **Config:** copiá `node_modules/@elestudionk/playwright-reporter/template/playwright.config.example.ts`, o agregá el reporter a tu config:
 
    ```ts
-   reporter: [["list"], ["@nkstudio/playwright-reporter"]],
+   reporter: [["list"], ["@elestudionk/playwright-reporter"]],
    use: { screenshot: "only-on-failure" },
    ```
 
@@ -29,7 +29,7 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
    - secret `NKPROOF_TOKEN` (el token del paso 4)
    - variable `NKPROOF_URL`
    - los secrets que necesiten los tests
-6. **Workflow:** copiá `template/nkproof.yml` a `.github/workflows/nkproof.yml`.
+6. **Workflow:** copiá `node_modules/@elestudionk/playwright-reporter/template/nkproof.yml` a `.github/workflows/nkproof.yml`.
 7. **Gate:** en GitHub, en Settings → Branches, protegé la rama de producción y marcá **e2e** como *required status check*. Si un test falla en el preview del PR, no se puede mergear.
 
    En cada PR, el workflow espera hasta 15 minutos el deploy preview y corre los tests contra esa URL:
@@ -40,13 +40,13 @@ Los tests corren en GitHub Actions, en el repositorio del cliente.
 
 ## Escribir los tests
 
-Importá `test` y `expect` de `@nkstudio/playwright-reporter/test`, no de `@playwright/test`. Es el mismo `test` de Playwright, con dos agregados:
+Importá `test` y `expect` de `@elestudionk/playwright-reporter/test`, no de `@playwright/test`. Es el mismo `test` de Playwright, con dos agregados:
 
 - **Sin las barras de los deploy previews.** Los tests no cargan el Netlify Drawer ni la Vercel Toolbar: no son parte de la app y mantienen la red ocupada.
 - **`openPage(url)` y `reloadPage()`.** Abren o recargan la página y esperan a que esté lista para usar. Usalos en lugar de `page.goto` y `page.reload`.
 
 ```ts
-import { expect, test } from "@nkstudio/playwright-reporter/test";
+import { expect, test } from "@elestudionk/playwright-reporter/test";
 
 test("Pedir licencia", async ({ page, openPage }) => {
   await test.step("Abrir «Licencias»", async () => {
@@ -62,7 +62,7 @@ test("Pedir licencia", async ({ page, openPage }) => {
 
 ## Pasos del test = pasos del caso
 
-Escribí cada caso con la guía de [docs/qa-guia-casos.md](../../docs/qa-guia-casos.md). En el test vinculado:
+Escribí cada caso con la guía de casos de QA de nk.proof. En el test vinculado:
 
 - **Cada paso del caso es un `test.step`** con exactamente el mismo texto que la acción del paso.
 - **Cada resultado esperado del paso es un `expect`** dentro de ese `test.step`.
@@ -110,3 +110,18 @@ No usar `--shard`: cada shard cerraría la ejecución en nk.proof al terminar, y
 | `NKPROOF_ENVIRONMENT`, `NKPROOF_PR`, `NKPROOF_BRANCH`, `NKPROOF_COMMIT`, `NKPROOF_BASE_URL` | Contexto de la corrida. Por defecto se toma de GitHub Actions. |
 
 Si nk.proof no responde, el reporter solo avisa por consola: el resultado del job depende únicamente de los tests.
+
+## Publicar una versión
+
+Las versiones se publican desde GitHub Actions con Trusted Publishing (OIDC, sin token guardado) y provenance. Nadie publica a mano.
+
+```bash
+npm version patch   # o minor / major: actualiza package.json y crea el tag vX.Y.Z
+git push --follow-tags
+```
+
+El workflow `release.yml` verifica que el tag coincida con la versión de `package.json`, corre typecheck, tests y build, y publica.
+
+## Licencia
+
+MIT

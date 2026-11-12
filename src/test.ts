@@ -2,7 +2,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 
 /**
  * Playwright's `test` for projects reported to nk.proof. Import `test` and
- * `expect` from "@nkstudio/playwright-reporter/test" instead of
+ * `expect` from "@elestudionk/playwright-reporter/test" instead of
  * "@playwright/test":
  *
  * - Deploy previews load without the toolbars Netlify and Vercel inject. They

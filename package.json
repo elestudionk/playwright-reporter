@@ -1,8 +1,24 @@
 {
-  "name": "@nkstudio/playwright-reporter",
+  "name": "@elestudionk/playwright-reporter",
   "version": "0.1.0",
   "description": "Playwright reporter that records automated runs in nk.proof",
-  "license": "UNLICENSED",
+  "license": "MIT",
+  "author": "El Estudio NK",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elestudionk/playwright-reporter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/elestudionk/playwright-reporter/issues"
+  },
+  "homepage": "https://github.com/elestudionk/playwright-reporter#readme",
+  "keywords": [
+    "playwright",
+    "reporter",
+    "nk.proof",
+    "testing",
+    "e2e"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -18,17 +34,34 @@
   },
   "typesVersions": {
     "*": {
-      "test": ["dist/test.d.ts"]
+      "test": [
+        "dist/test.d.ts"
+      ]
     }
   },
-  "files": ["dist", "template"],
+  "files": [
+    "dist",
+    "template"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "prepack": "npm run build"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.42"
   },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^22",
+    "typescript": "^5",
+    "vitest": "5.0.5"
+  },
   "engines": {
     "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
