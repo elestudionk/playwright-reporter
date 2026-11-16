@@ -1,11 +1,15 @@
 import type { TestResult } from "@playwright/test/reporter";
 
+import type { FailureCause } from "./origin";
+
 /** One test's final outcome, as sent to nk.proof. */
 export interface ReportedOutcome {
   key: string;
   status: TestResult["status"];
   durationMs: number;
   error: string | null;
+  /** Origin of the failure; null when the test passed or attached no signals. */
+  cause: FailureCause | null;
   steps: { title: string; status: "passed" | "failed" }[];
 }
 

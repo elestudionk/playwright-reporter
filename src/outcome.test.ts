@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { OutcomeMerger, inBatches, type ReportedOutcome } from "./outcome";
 
 function outcome(status: ReportedOutcome["status"], error: string | null = null): ReportedOutcome {
-  return { key: "login", status, durationMs: 100, error, steps: [] };
+  return { key: "login", status, durationMs: 100, error, cause: null, steps: [] };
 }
 
 describe("OutcomeMerger", () => {
