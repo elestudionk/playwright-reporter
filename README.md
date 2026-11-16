@@ -70,6 +70,21 @@ Escribí cada caso con la guía de casos de QA de nk.proof. En el test vinculado
 
 Cuando coinciden, la ejecución en nk.proof muestra los pasos del caso con su resultado esperado, marcados por la automatización. Si no coinciden, muestra los pasos del test.
 
+## Origen de la falla
+
+Cuando un test falla, nk.proof muestra de dónde viene la falla, según lo que el navegador vio durante el test:
+
+| Origen | Cuándo | Evidencia que se guarda |
+|---|---|---|
+| **Backend** | Alguna respuesta tuvo estado 5xx. | El pedido y su estado, por ejemplo `POST /api/pagos → 500`. |
+| **Backend** | El test usó la sesión del navegador pero no abrió ninguna página: solo llama a la API. | Una nota que lo dice. |
+| **Frontend** | La página tuvo un error de JavaScript sin atrapar y ninguna respuesta 5xx. | El mensaje del error. |
+| **Sin determinar** | Ninguna de las anteriores. Por ejemplo, un valor incorrecto con todas las respuestas en 200. | Ninguna. |
+
+No adivina: sin evidencia, el origen queda sin determinar. Si hay un 5xx y también un error en la página, gana el 5xx, porque el error suele ser su consecuencia. Las URLs se guardan sin los parámetros, que pueden traer datos personales, y se guardan hasta 5 entradas de cada tipo.
+
+Solo funciona con el `test` de este paquete. Lo que pase en un contexto creado a mano (`browser.newContext()`) no se observa.
+
 ## Vincular tests a casos
 
 Cada test se identifica por `archivo › describe › título`. Hay dos formas de vincularlo a un caso:

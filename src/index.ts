@@ -11,6 +11,7 @@ import type {
   TestStep,
 } from "@playwright/test/reporter";
 
+import { SIGNALS_ATTACHMENT, classifyFailure, parseSignals, type FailureCause } from "./origin";
 import { OutcomeMerger, inBatches, type ReportedOutcome } from "./outcome";
 
 /**
@@ -159,7 +160,9 @@ export default class NkproofReporter implements Reporter {
     const screenshot = result.attachments.find(
       (attachment) => attachment.name === "screenshot" && attachment.path && attachment.contentType.startsWith("image/"),
     )?.path;
+    const failed = !expectedFailure && result.status !== "passed" && result.status !== "skipped";
     const error = expectedFailure || result.status === "passed" ? null : this.describeFailure(test, result);
+    const cause = failed ? this.causeOf(result) : null;
 
     this.enqueue(async () => {
       if (!this.runId) return;
@@ -170,6 +173,7 @@ export default class NkproofReporter implements Reporter {
         status: expectedFailure ? "passed" : result.status,
         durationMs: result.duration,
         error,
+        cause,
         steps: result.steps.filter((step) => step.category === "test.step").map((step: TestStep) => ({
           title: step.title,
           status: step.error ? "failed" : "passed",
@@ -212,6 +216,16 @@ export default class NkproofReporter implements Reporter {
    * annotations (e.g. a link to the data it used) and, when it ran on this
    * machine, the command that opens its trace.
    */
+  /**
+   * Origin of the failure, from the signals the package's `test` attaches.
+   * Null for tests written with Playwright's own `test`: nothing was observed.
+   */
+  private causeOf(result: TestResult): FailureCause | null {
+    const attached = result.attachments.find((attachment) => attachment.name === SIGNALS_ATTACHMENT)?.body;
+    const signals = parseSignals(attached?.toString("utf8"));
+    return signals ? classifyFailure(signals) : null;
+  }
+
   private describeFailure(test: TestCase, result: TestResult): string | null {
     const message = result.error?.message ?? result.error?.value ?? null;
     const notes = [...test.annotations, ...result.annotations]
