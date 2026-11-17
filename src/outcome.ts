@@ -10,7 +10,8 @@ export interface ReportedOutcome {
   error: string | null;
   /** Origin of the failure; null when the test passed or attached no signals. */
   cause: FailureCause | null;
-  steps: { title: string; status: "passed" | "failed" }[];
+  /** `expected`: the step's expected result when it was written with `step()`, else null. */
+  steps: { title: string; status: "passed" | "failed"; expected: string | null }[];
 }
 
 /** Higher is worse: a failure anywhere is what the case's result must show. */

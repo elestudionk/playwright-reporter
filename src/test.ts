@@ -1,5 +1,6 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
+import { stepAnnotation } from "./case";
 import { SIGNALS_ATTACHMENT, addSignal, describeResponse, emptySignals, type FailureSignals } from "./origin";
 
 /**
@@ -92,4 +93,17 @@ export const test = base.extend<NkproofFixtures & NkproofOptions & InternalFixtu
   },
 });
 
+/**
+ * A `test.step` that also declares the step's expected result, so the case
+ * nk.proof builds from the test reads "action → expected result" on every
+ * step. The `expect`s inside `body` must check exactly that result.
+ *
+ *   await step("Tocar «Guardar»", "Aparece «Cambios guardados».", async () => { ... });
+ */
+export async function step<T>(action: string, expected: string, body: () => T | Promise<T>): Promise<T> {
+  base.info().annotations.push(stepAnnotation(action, expected));
+  return base.step(action, body);
+}
+
+export { caseDetails, type CaseDetails } from "./case";
 export { expect };
