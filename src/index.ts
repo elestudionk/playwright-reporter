@@ -11,6 +11,7 @@ import type {
   TestStep,
 } from "@playwright/test/reporter";
 
+import { detailsOf, withExpected } from "./case";
 import { SIGNALS_ATTACHMENT, classifyFailure, parseSignals, type FailureCause } from "./origin";
 import { OutcomeMerger, inBatches, type ReportedOutcome } from "./outcome";
 
@@ -110,6 +111,7 @@ export default class NkproofReporter implements Reporter {
           line: test.location.line,
           suitePath: this.describesOf(test),
           tags: test.tags,
+          details: detailsOf(test.annotations),
         },
       ];
     });
@@ -174,10 +176,13 @@ export default class NkproofReporter implements Reporter {
         durationMs: result.duration,
         error,
         cause,
-        steps: result.steps.filter((step) => step.category === "test.step").map((step: TestStep) => ({
-          title: step.title,
-          status: step.error ? "failed" : "passed",
-        })),
+        steps: withExpected(
+          result.steps.filter((step) => step.category === "test.step").map((step: TestStep) => ({
+            title: step.title,
+            status: step.error ? ("failed" as const) : ("passed" as const),
+          })),
+          result.annotations,
+        ),
       });
       if (merged) this.queue.push(merged);
       if (resultId && result.status !== "passed" && screenshot) await this.uploadScreenshot(resultId, screenshot);

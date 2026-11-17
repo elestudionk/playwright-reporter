@@ -60,15 +60,38 @@ test("Pedir licencia", async ({ page, openPage }) => {
 
 **Página lista (opcional).** Si la app marca cuándo responde a los clicks, poné ese selector en `readySelector` de la config y `openPage` lo espera. En una app de Next.js alcanza con un componente cliente en el layout raíz que, en un `useEffect`, haga `document.documentElement.dataset.hydrated = "true"`, y `readySelector: "html[data-hydrated]"`. Sin `readySelector`, `openPage` espera a que la página cargue. El código de los tests es el mismo en los dos casos.
 
-## Pasos del test = pasos del caso
+## El test describe su caso
 
-Escribí cada caso con la guía de casos de QA de nk.proof. En el test vinculado:
+El test es la fuente del caso: declara todo lo que una persona necesita para reproducirlo, y nk.proof crea y actualiza el caso con eso. Escribilo con la guía de casos de QA de nk.proof.
 
-- **Cada paso del caso es un `test.step`** con exactamente el mismo texto que la acción del paso.
-- **Cada resultado esperado del paso es un `expect`** dentro de ese `test.step`.
-- **Nada de más ni de menos:** ninguna verificación que no esté en el caso, y ningún paso del caso sin su `test.step`.
+- **Descripción, precondiciones y datos de prueba** van como anotaciones, con `caseDetails`.
+- **Cada paso del caso es un `step(acción, resultado esperado, cuerpo)`.** El texto de la acción es el paso del caso y el resultado esperado es lo que el caso dice que tiene que pasar.
+- **Cada resultado esperado se verifica con `expect` dentro de ese `step`:** nada de más ni de menos.
 
-Cuando coinciden, la ejecución en nk.proof muestra los pasos del caso con su resultado esperado, marcados por la automatización. Si no coinciden, muestra los pasos del test.
+```ts
+import { caseDetails, expect, step, test } from "@estudio-nk/playwright-reporter/test";
+
+test(
+  "Rechazar un pago negativo",
+  {
+    annotation: [
+      { type: "nkproof", description: "pulse.PAG-04" },
+      ...caseDetails({
+        description: "La API no tiene que aceptar pagos negativos aunque la pantalla ya los bloquee.",
+        preconditions: "Sesión iniciada con un usuario Finanzas (puede crear pagos).",
+        testData: "Pago:\nDetalle (obligatorio): Pago negativo <id de la corrida>\nMonto (obligatorio): −100",
+      }),
+    ],
+  },
+  async ({ request }) => {
+    await step("Enviar el pago con monto −100", "Responde 422 con el código «VALIDATION_ERROR».", async () => {
+      // expect(...)
+    });
+  },
+);
+```
+
+Un `test.step` común también se reporta, pero sin resultado esperado. En nk.proof, **Actualizar** en el test vinculado trae al caso el título, los pasos con sus resultados esperados, la descripción, las precondiciones y los datos de prueba.
 
 ## Origen de la falla
 
